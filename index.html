@@ -1,0 +1,613 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>et.co</title>
+  <style>
+    :root {
+      --ref-w: 2224;
+      --ref-h: 1668;
+      --scene-w: max(100vw, calc(100vh * 2224 / 1668));
+      --scene-h: max(100vh, calc(100vw * 1668 / 2224));
+      --ease-cloud: cubic-bezier(.18, .78, .22, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #62db35;
+      font-family: ui-rounded, "Arial Rounded MT Bold", Arial, sans-serif;
+    }
+
+    body {
+      position: fixed;
+      inset: 0;
+    }
+
+    .scene {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: var(--scene-w);
+      height: var(--scene-h);
+      overflow: hidden;
+      transform: translate(-50%, -50%);
+      transform-origin: center;
+      user-select: none;
+      opacity: 0;
+      transition: opacity 260ms ease;
+    }
+
+    body.is-video-ready .scene {
+      opacity: 1;
+    }
+
+    .background-video {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: 0;
+    }
+
+    .character-layer {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+    }
+
+    .character {
+      position: absolute;
+      left: calc(var(--x) / var(--ref-w) * 100%);
+      top: calc(var(--y) / var(--ref-h) * 100%);
+      width: calc(var(--w) / var(--ref-w) * 100%);
+      height: calc(var(--h) / var(--ref-h) * 100%);
+      padding: 0;
+      border: 0;
+      background: transparent;
+      cursor: pointer;
+      outline: none;
+      transform: translate(0, 0) rotate(var(--r, 0deg));
+      transform-origin: center;
+      transition: transform 2200ms var(--ease-cloud);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .character:focus-visible .character-art {
+      filter: drop-shadow(0 0 10px rgba(255, 255, 255, .85));
+    }
+
+    .character-art {
+      position: absolute;
+      left: var(--img-left);
+      top: var(--img-top);
+      width: var(--img-width);
+      height: auto;
+      max-width: none;
+      pointer-events: none;
+      transform-origin: center;
+      will-change: transform;
+    }
+
+    .character.is-scooted {
+      transform: translate(var(--scoot-x), var(--scoot-y)) rotate(var(--r, 0deg));
+    }
+
+    .anim-bounce {
+      animation: bounce .56s cubic-bezier(.2, .95, .3, 1);
+    }
+
+    .anim-spin {
+      animation: spin .68s cubic-bezier(.2, .9, .3, 1);
+    }
+
+    .anim-pop {
+      animation: pop .48s cubic-bezier(.2, 1, .25, 1);
+    }
+
+    .anim-wiggle {
+      animation: wiggle .52s cubic-bezier(.2, .95, .3, 1);
+    }
+
+    .anim-tilt {
+      animation: tilt .62s cubic-bezier(.2, .85, .25, 1);
+    }
+
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0) scale(1); }
+      35% { transform: translateY(-9%) scale(1.02, .98); }
+      62% { transform: translateY(3%) scale(.99, 1.01); }
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg) scale(1); }
+      65% { transform: rotate(380deg) scale(1.04); }
+      100% { transform: rotate(360deg) scale(1); }
+    }
+
+    @keyframes pop {
+      0%, 100% { transform: scale(1); }
+      45% { transform: scale(1.16); }
+      70% { transform: scale(.98); }
+    }
+
+    @keyframes wiggle {
+      0%, 100% { transform: rotate(0deg); }
+      20% { transform: rotate(-8deg); }
+      45% { transform: rotate(7deg); }
+      70% { transform: rotate(-3deg); }
+    }
+
+    @keyframes tilt {
+      0%, 100% { transform: translateX(0) rotate(0deg); }
+      40% { transform: translateX(5%) rotate(8deg); }
+      72% { transform: translateX(-2%) rotate(-3deg); }
+    }
+
+    .logo-intro {
+      position: fixed;
+      inset: 0;
+      z-index: 5;
+      display: grid;
+      place-items: center;
+      pointer-events: none;
+      background: #62db35;
+      animation: logo-dissolve 4.9s ease forwards;
+    }
+
+    .logo-intro img {
+      width: min(86vw, 1040px);
+      max-height: 70vh;
+      object-fit: contain;
+      filter: drop-shadow(0 24px 45px rgba(0, 0, 0, .35));
+      transform: scale(1.06);
+      animation: logo-float 4.9s ease forwards;
+    }
+
+    @keyframes logo-dissolve {
+      0%, 62% { opacity: 1; }
+      100% { opacity: 0; visibility: hidden; }
+    }
+
+    @keyframes logo-float {
+      0%, 62% { transform: scale(1.06); }
+      100% { transform: scale(1.11); }
+    }
+
+    .search-dock {
+      position: fixed;
+      left: 50%;
+      bottom: clamp(16px, 3vh, 34px);
+      z-index: 4;
+      width: min(720px, calc(100vw - 34px));
+      transform: translateX(-50%);
+    }
+
+    .search-dock input {
+      width: 100%;
+      height: clamp(48px, 7vh, 64px);
+      border: 3px solid rgba(0, 0, 0, .82);
+      border-radius: 999px;
+      padding: 0 26px;
+      background: rgba(255, 255, 255, .88);
+      color: #111;
+      box-shadow: 0 14px 36px rgba(0, 0, 0, .24);
+      font: 700 clamp(18px, 2.4vw, 28px)/1 ui-rounded, "Arial Rounded MT Bold", Arial, sans-serif;
+      outline: none;
+    }
+
+    .search-dock input:focus {
+      background: rgba(255, 255, 255, .96);
+      box-shadow: 0 15px 40px rgba(0, 0, 0, .3), 0 0 0 4px rgba(255, 238, 80, .8);
+    }
+
+    .sound-unlocker {
+      position: fixed;
+      inset: 0;
+      z-index: 3;
+      background: transparent;
+      border: 0;
+      padding: 0;
+      opacity: 0;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <main class="scene" aria-label="et.co scene">
+    <video
+      class="background-video"
+      id="backgroundVideo"
+      src="images/et-bground.mp4"
+      autoplay
+      loop
+      playsinline
+      preload="auto"
+    ></video>
+    <div class="character-layer" id="characterLayer" aria-label="characters"></div>
+  </main>
+
+  <div class="logo-intro" aria-hidden="true">
+    <img src="images/etco logo.png" alt="">
+  </div>
+
+  <form class="search-dock" role="search" autocomplete="off">
+    <input type="search" aria-label="Search" placeholder="Search">
+  </form>
+
+  <audio id="musicLoop" src="music/et-co mech organ four.mp3" preload="auto" autoplay loop></audio>
+
+  <script>
+    const characters = [
+      {
+        name: 'cloud1',
+        label: 'long cloud',
+        src: 'images/cloud1.png',
+        sound: 'sfx/HornInstrument CTE01_85.5.wav',
+        anim: 'tilt',
+        mask: 'line',
+        cloud: true,
+        scoot: { x: 52, y: -18 },
+        image: { w: 1024, h: 1024, bbox: [202, 387, 620, 179] },
+        place: { x: 1215, y: 74, w: 350, h: 101 }
+      },
+      {
+        name: 'cloud2',
+        label: 'worried cloud',
+        src: 'images/cloud2.png',
+        sound: 'sfx/HornInstrument CTE01_85.3.wav',
+        anim: 'tilt',
+        mask: 'line',
+        cloud: true,
+        scoot: { x: -64, y: 20 },
+        image: { w: 1536, h: 1024, bbox: [308, 222, 915, 614] },
+        place: { x: 2072, y: 24, w: 612, h: 411 }
+      },
+      {
+        name: 'cloud3',
+        label: 'smiling cloud',
+        src: 'images/cloud3.png',
+        sound: 'sfx/Goo_Harvest_1.wav',
+        anim: 'tilt',
+        mask: 'line',
+        cloud: true,
+        scoot: { x: 46, y: 22 },
+        image: { w: 1536, h: 1024, bbox: [321, 207, 937, 571] },
+        place: { x: 2925, y: 30, w: 510, h: 311 }
+      },
+      {
+        name: 'eyePatchGuy',
+        label: 'eye patch guy',
+        src: 'images/eye-patch guy.png',
+        sound: 'sfx/Frantic Beep.wav',
+        anim: 'bounce',
+        image: { w: 1536, h: 1024, bbox: [537, 181, 446, 633] },
+        place: { x: 2318, y: 522, w: 88, h: 125 }
+      },
+      {
+        name: 'twoGuys',
+        label: 'two guys',
+        src: 'images/two guys.png',
+        sound: 'sfx/Breakable Pots Medium Impact Smash Ceramic Plates 03.wav',
+        anim: 'pop',
+        image: { w: 1536, h: 1024, bbox: [325, 107, 960, 715] },
+        place: { x: 2742, y: 438, w: 282, h: 210 }
+      },
+      {
+        name: 'blueSquareGuy',
+        label: 'blue square guy',
+        src: 'images/blue-square guy.png',
+        sound: 'sfx/Boing.wav',
+        anim: 'bounce',
+        mask: 'drop-green',
+        image: { w: 1024, h: 1024, bbox: [394, 118, 298, 671] },
+        place: { x: 1748, y: 680, w: 158, h: 356 }
+      },
+      {
+        name: 'duck',
+        label: 'duck',
+        src: 'images/duck.png',
+        sound: 'sfx/Human Voice Huh.wav',
+        anim: 'wiggle',
+        image: { w: 1024, h: 1024, bbox: [252, 201, 502, 550] },
+        place: { x: 1118, y: 852, w: 190, h: 208 }
+      },
+      {
+        name: 'purpleGuy',
+        label: 'purple guy',
+        src: 'images/purple guy.png',
+        sound: 'sfx/small creature cry.wav',
+        anim: 'spin',
+        image: { w: 1024, h: 1536, bbox: [186, 378, 722, 621] },
+        place: { x: 3036, y: 930, w: 178, h: 153 }
+      },
+      {
+        name: 'stickFig1',
+        label: 'stick figure',
+        src: 'images/stick-fig1.png',
+        sound: 'sfx/Human Fart.wav',
+        anim: 'bounce',
+        mask: 'line',
+        image: { w: 1536, h: 1024, bbox: [612, 210, 248, 557] },
+        place: { x: 276, y: 1254, w: 98, h: 220 }
+      },
+      {
+        name: 'flatBlueGuy',
+        label: 'flat blue guy',
+        src: 'images/flat blue guy.png',
+        sound: 'sfx/HornInstrument CTE01_85.5.wav',
+        anim: 'pop',
+        image: { w: 1536, h: 1024, bbox: [61, 265, 1405, 415] },
+        place: { x: 72, y: 1600, w: 250, h: 74 }
+      },
+      {
+        name: 'climber',
+        label: 'climber',
+        src: 'images/climber.png',
+        sound: 'sfx/HornInstrument CTE01_85.3.wav',
+        anim: 'wiggle',
+        mask: 'line',
+        image: { w: 1536, h: 1024, bbox: [479, 214, 441, 524] },
+        rotate: -28,
+        place: { x: 1128, y: 1514, w: 74, h: 88 }
+      },
+      {
+        name: 'happyBoy',
+        label: 'happy boy',
+        src: 'images/happy boy.png',
+        sound: 'sfx/Goo_Harvest_1.wav',
+        anim: 'spin',
+        image: { w: 1024, h: 1536, bbox: [300, 218, 435, 935] },
+        place: { x: 1018, y: 1786, w: 112, h: 241 }
+      },
+      {
+        name: 'squatSmile',
+        label: 'squat smile',
+        src: 'images/squat smile.png',
+        sound: 'sfx/Frantic Beep.wav',
+        anim: 'pop',
+        mask: 'line',
+        image: { w: 1024, h: 1536, bbox: [185, 416, 669, 638] },
+        rotate: 0,
+        place: { x: 3078, y: 1484, w: 118, h: 112 }
+      }
+    ];
+
+    const backgroundVideo = document.getElementById('backgroundVideo');
+    const musicLoop = document.getElementById('musicLoop');
+    const characterLayer = document.getElementById('characterLayer');
+    const REFERENCE_TO_VIDEO_SCALE = 0.66475;
+    const REFERENCE_TO_VIDEO_OFFSET = { x: -50, y: 9 };
+
+    backgroundVideo.volume = 0.72;
+    musicLoop.volume = 0.46;
+
+    function showSceneWhenVideoIsMoving() {
+      if (backgroundVideo.readyState < 2) {
+        return;
+      }
+
+      document.body.classList.add('is-video-ready');
+    }
+
+    function tryStartAudio() {
+      backgroundVideo.muted = false;
+      backgroundVideo.play().then(showSceneWhenVideoIsMoving).catch(showSceneWhenVideoIsMoving);
+      musicLoop.play().catch(() => {});
+    }
+
+    function playSound(src) {
+      tryStartAudio();
+      const sound = new Audio(src);
+      sound.volume = 0.82;
+      sound.play().catch(() => {});
+    }
+
+    function addClickAnimation(art, name) {
+      const className = `anim-${name}`;
+      art.classList.remove(className);
+      void art.offsetWidth;
+      art.classList.add(className);
+      art.addEventListener('animationend', () => art.classList.remove(className), { once: true });
+    }
+
+    function cleanCharacterImage(src, maskMode) {
+      return new Promise((resolve) => {
+        const source = new Image();
+        source.onload = () => {
+          const canvas = document.createElement('canvas');
+          const context = canvas.getContext('2d', { willReadFrequently: true });
+
+          canvas.width = source.naturalWidth;
+          canvas.height = source.naturalHeight;
+          context.drawImage(source, 0, 0);
+
+          const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+          const data = imageData.data;
+          const width = canvas.width;
+          const height = canvas.height;
+          const visited = new Uint8Array(width * height);
+          const stack = [];
+
+          function isFloodable(pixel) {
+            const index = pixel * 4;
+            const red = data[index];
+            const green = data[index + 1];
+            const blue = data[index + 2];
+            const alpha = data[index + 3];
+            const max = Math.max(red, green, blue);
+            const min = Math.min(red, green, blue);
+            const saturation = max === 0 ? 0 : (max - min) / max;
+
+            if (alpha < 248) {
+              return true;
+            }
+
+            if (maskMode === 'line') {
+              return max > 58;
+            }
+
+            if (max < 58) {
+              return false;
+            }
+
+            return saturation < 0.38 || max > 235;
+          }
+
+          function pushIfFloodable(x, y) {
+            if (x < 0 || y < 0 || x >= width || y >= height) {
+              return;
+            }
+
+            const pixel = y * width + x;
+            if (visited[pixel] || !isFloodable(pixel)) {
+              return;
+            }
+
+            visited[pixel] = 1;
+            stack.push(pixel);
+          }
+
+          for (let x = 0; x < width; x += 1) {
+            pushIfFloodable(x, 0);
+            pushIfFloodable(x, height - 1);
+          }
+
+          for (let y = 1; y < height - 1; y += 1) {
+            pushIfFloodable(0, y);
+            pushIfFloodable(width - 1, y);
+          }
+
+          while (stack.length) {
+            const pixel = stack.pop();
+            const x = pixel % width;
+            const y = Math.floor(pixel / width);
+            pushIfFloodable(x + 1, y);
+            pushIfFloodable(x - 1, y);
+            pushIfFloodable(x, y + 1);
+            pushIfFloodable(x, y - 1);
+          }
+
+          for (let index = 0; index < data.length; index += 4) {
+            const pixel = index / 4;
+            const red = data[index];
+            const green = data[index + 1];
+            const blue = data[index + 2];
+            const alpha = data[index + 3];
+            const greenBackground = maskMode === 'drop-green' && green > 75 && green > red * 1.08 && green > blue * 1.18;
+            const sourceX = pixel % width;
+            const sourceY = Math.floor(pixel / width);
+            const squatGroundLine = maskMode === 'squat-no-line'
+              && sourceX > 185
+              && sourceX < 900
+              && sourceY > 555
+              && sourceY < 675
+              && red < 80
+              && green < 80
+              && blue < 80;
+
+            if (visited[pixel] || greenBackground || squatGroundLine || alpha < 220) {
+              data[index + 3] = 0;
+            } else if (alpha < 250) {
+              data[index + 3] = Math.round((alpha - 220) / 30 * 255);
+            }
+          }
+
+          context.putImageData(imageData, 0, 0);
+          canvas.toBlob((blob) => {
+            resolve(blob ? URL.createObjectURL(blob) : src);
+          }, 'image/png');
+        };
+        source.onerror = () => resolve(src);
+        source.src = src;
+      });
+    }
+
+    function createCharacter(character) {
+      const { image, place } = character;
+      const [bboxX, bboxY, bboxW, bboxH] = image.bbox;
+      const scale = place.w / bboxW;
+      const hitPad = character.hitPad ?? 0.16;
+      const hitbox = character.hitbox || {
+        x: place.x - place.w * hitPad,
+        y: place.y - place.h * hitPad,
+        w: place.w * (1 + hitPad * 2),
+        h: place.h * (1 + hitPad * 2)
+      };
+      const videoPlace = {
+        x: Math.round(hitbox.x * REFERENCE_TO_VIDEO_SCALE + REFERENCE_TO_VIDEO_OFFSET.x),
+        y: Math.round(hitbox.y * REFERENCE_TO_VIDEO_SCALE + REFERENCE_TO_VIDEO_OFFSET.y),
+        w: Math.round(hitbox.w * REFERENCE_TO_VIDEO_SCALE),
+        h: Math.round(hitbox.h * REFERENCE_TO_VIDEO_SCALE)
+      };
+      const button = document.createElement('button');
+      const img = document.createElement('img');
+
+      button.type = 'button';
+      button.className = 'character';
+      button.setAttribute('aria-label', character.label);
+      button.style.setProperty('--x', videoPlace.x);
+      button.style.setProperty('--y', videoPlace.y);
+      button.style.setProperty('--w', videoPlace.w);
+      button.style.setProperty('--h', videoPlace.h);
+      button.style.setProperty('--r', `${character.rotate || 0}deg`);
+      button.style.setProperty('--img-left', `${((place.x - hitbox.x) - bboxX * scale) / hitbox.w * 100}%`);
+      button.style.setProperty('--img-top', `${((place.y - hitbox.y) - bboxY * scale) / hitbox.h * 100}%`);
+      button.style.setProperty('--img-width', `${image.w * scale / hitbox.w * 100}%`);
+
+      if (character.cloud) {
+        const scootX = Math.round(character.scoot.x * REFERENCE_TO_VIDEO_SCALE);
+        const scootY = Math.round(character.scoot.y * REFERENCE_TO_VIDEO_SCALE);
+        button.style.setProperty('--scoot-x', `calc(${scootX} / var(--ref-w) * var(--scene-w))`);
+        button.style.setProperty('--scoot-y', `calc(${scootY} / var(--ref-h) * var(--scene-h))`);
+      }
+
+      img.className = 'character-art';
+      img.src = character.src;
+      img.alt = '';
+      img.draggable = false;
+      button.append(img);
+
+      cleanCharacterImage(character.src, character.mask).then((cleanedSrc) => {
+        img.src = cleanedSrc;
+      });
+
+      button.addEventListener('click', () => {
+        playSound(character.sound);
+        if (character.cloud) {
+          button.classList.toggle('is-scooted');
+        }
+        addClickAnimation(img, character.anim);
+      });
+
+      return button;
+    }
+
+    characters.forEach((character) => {
+      characterLayer.append(createCharacter(character));
+    });
+
+    document.querySelector('.search-dock').addEventListener('submit', (event) => {
+      event.preventDefault();
+    });
+
+    backgroundVideo.addEventListener('loadeddata', showSceneWhenVideoIsMoving);
+    backgroundVideo.addEventListener('playing', showSceneWhenVideoIsMoving);
+    tryStartAudio();
+    setTimeout(tryStartAudio, 250);
+    setTimeout(tryStartAudio, 1200);
+    window.addEventListener('pointerdown', tryStartAudio, { once: true });
+    window.addEventListener('keydown', tryStartAudio, { once: true });
+    window.addEventListener('load', tryStartAudio);
+  </script>
+</body>
+</html>
