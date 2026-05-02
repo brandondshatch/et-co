@@ -30,6 +30,12 @@
     body {
       position: fixed;
       inset: 0;
+      cursor: url("images/pointer-cursor.png") 3 2, auto;
+    }
+
+    button,
+    input {
+      cursor: url("images/pointer-cursor.png") 3 2, auto;
     }
 
     .scene {
@@ -74,7 +80,7 @@
       padding: 0;
       border: 0;
       background: transparent;
-      cursor: pointer;
+      cursor: url("images/pointer-cursor.png") 3 2, auto;
       outline: none;
       transform: translate(0, 0) rotate(var(--r, 0deg));
       transform-origin: center;
@@ -220,6 +226,31 @@
       opacity: 0;
       pointer-events: none;
     }
+
+    .foxy-stage {
+      position: fixed;
+      inset: 0;
+      z-index: 9;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .foxy {
+      position: absolute;
+      left: 50%;
+      bottom: 0;
+      width: min(1120px, 112vw);
+      max-width: none;
+      height: auto;
+      transform: translate(-50%, 115%);
+      filter: drop-shadow(0 26px 38px rgba(0, 0, 0, .34));
+      transition: transform 4.8s cubic-bezier(.19, .82, .22, 1);
+      will-change: transform;
+    }
+
+    .foxy-stage.is-risen .foxy {
+      transform: translate(-50%, 24%);
+    }
   </style>
 </head>
 <body>
@@ -244,7 +275,12 @@
     <input type="search" aria-label="Search" placeholder="Search">
   </form>
 
+  <div class="foxy-stage" id="foxyStage" aria-hidden="true">
+    <img class="foxy" id="foxy" src="images/foxy.png" alt="">
+  </div>
+
   <audio id="musicLoop" src="music/et-co mech organ four.mp3" preload="auto" autoplay loop></audio>
+  <audio id="foxyAudio" src="sfx/my life.mp3" preload="auto"></audio>
 
   <script>
     const characters = [
@@ -385,11 +421,16 @@
     const backgroundVideo = document.getElementById('backgroundVideo');
     const musicLoop = document.getElementById('musicLoop');
     const characterLayer = document.getElementById('characterLayer');
+    const searchForm = document.querySelector('.search-dock');
+    const searchInput = searchForm.querySelector('input');
+    const foxyStage = document.getElementById('foxyStage');
+    const foxyAudio = document.getElementById('foxyAudio');
     const REFERENCE_TO_VIDEO_SCALE = 0.66475;
     const REFERENCE_TO_VIDEO_OFFSET = { x: -50, y: 9 };
 
     backgroundVideo.volume = 0.72;
     musicLoop.volume = 0.46;
+    foxyAudio.volume = 0.92;
 
     function showSceneWhenVideoIsMoving() {
       if (backgroundVideo.readyState < 2) {
@@ -596,8 +637,28 @@
       characterLayer.append(createCharacter(character));
     });
 
-    document.querySelector('.search-dock').addEventListener('submit', (event) => {
+    function runFoxySequence() {
+      foxyAudio.pause();
+      foxyAudio.currentTime = 0;
+      foxyStage.classList.add('is-risen');
+
+      window.setTimeout(() => {
+        foxyAudio.play().catch(() => {});
+      }, 4800);
+    }
+
+    searchForm.addEventListener('submit', (event) => {
       event.preventDefault();
+      if (!searchInput.value.trim()) {
+        return;
+      }
+
+      tryStartAudio();
+      runFoxySequence();
+    });
+
+    foxyAudio.addEventListener('ended', () => {
+      foxyStage.classList.remove('is-risen');
     });
 
     backgroundVideo.addEventListener('loadeddata', showSceneWhenVideoIsMoving);
