@@ -397,23 +397,29 @@ function buzzStart() {
 }
 
 
-// ---- music: 8-bit loops (pulse-wave horns, triangle bass, noise drums) ----
-// Each song is 8 bars of eighth notes. lead: MIDI note, 0 = hold, -1 = rest.
-// To swap in a transcribed melody, replace a song's lead/roots arrays.
+// ---- music: "From House to House" (melody only, no lyrics), arranged for 8-bit chip sound ----
+// 6/8 time, Eb major. One entry per eighth note: MIDI pitch, 0 = hold, -1 = rest.
+// The loop ends on the pickup note (Bb) that starts the song.
+const FHTH = [
+  58, 0, 63, 63, 0, 58,   58, 0, 65, 65, 0, 58,   68, 0, 67, 65, 0, 63,   65, 0, 0, 0, -1, 58,
+  58, 0, 65, 65, 0, 58,   58, 0, 67, 67, 0, 63,   70, 0, 68, 67, 0, 65,   63, 0, 0, 0, -1, 63,
+  72, 0, 62, 63, 0, 72,   70, 0, 62, 63, 0, 70,   68, 0, 67, 65, 0, 63,   67, 0, 0, 0, -1, 65,
+  63, 0, 72, 70, 0, 67,   63, 0, 72, 70, 0, 63,   68, 0, 67, 65, 0, 63,   63, 0, 0, 0, 0, 58,
+];
+// chords per half bar (dotted quarter): [root, quality]
+const FHTH_CH = [
+  [51, 'M'], [48, 'm'], [53, 'm'], [46, '7'], [51, 'M'], [48, 'm'], [53, 'm'], [46, '7'],
+  [46, 'M'], [46, 'M'], [51, 'M'], [48, 'm'], [53, 'm'], [46, '7'], [51, 'sus'], [51, '7'],
+  [44, 'M'], [44, 'M'], [43, 'm'], [48, 'm'], [53, 'm'], [53, 'm'], [50, 'm'], [43, '7'],
+  [48, 'm'], [43, 'm'], [44, 'M'], [43, 'm'], [53, 'm'], [46, 'sus'], [51, 'M'], [51, 'M'],
+];
+const CHORD = { M: [0, 4, 7], m: [0, 3, 7], '7': [0, 4, 10], sus: [0, 5, 7] };
+const up12 = a => a.map(n => n > 0 ? n + 12 : n);
 const SONGS = {
-  street: {
-    bpm: 152, duty: 0.25, drums: true,
-    lead: [67, 72, 76, 79, 0, 76, 79, 0, 81, 79, 76, 72, 74, 76, 74, 0, 77, 81, 77, 72, 77, 81, 84, 0, 83, 81, 79, 77, 76, 74, 79, 0,
-      67, 72, 76, 79, 0, 76, 79, 0, 84, 83, 81, 79, 81, 79, 76, 0, 77, 76, 74, 77, 76, 74, 72, 71, 72, 0, 79, 0, 72, -1, -1, -1],
-    roots: [48, 45, 41, 43, 48, 45, [38, 43], 48],
-  },
-  hall: {
-    // placeholder hymn tune, played by a honky 8-bit brass band with oom-pah tuba
-    bpm: 138, duty: 0.125, honk: true, oompah: true,
-    lead: [67, 0, 71, 0, 74, 0, 74, 0, 76, 0, 74, 0, 71, 0, 67, 0, 72, 0, 76, 0, 74, 0, 71, 0, 69, 0, 0, 0, 0, 0, -1, 0,
-      67, 0, 71, 0, 74, 0, 79, 0, 78, 0, 76, 0, 74, 0, 71, 0, 72, 0, 69, 0, 74, 0, 66, 0, 67, 0, 0, 0, 0, 0, -1, 0],
-    roots: [43, [48, 43], [48, 43], 38, 43, [38, 43], [48, 38], 43],
-  },
+  // street: up-tempo 8-bit with a driving 6/8 beat
+  street: { bpm: 210, bar: 6, duty: 0.25, drums: true, lead: up12(FHTH), chords: FHTH_CH },
+  // Kingdom Hall: honky little horn band with an oom-pah tuba
+  hall: { bpm: 184, bar: 6, duty: 0.125, honk: true, oompah: true, lead: up12(FHTH), chords: FHTH_CH },
 };
 const waves = {};
 function pulseWave(d) {
@@ -442,30 +448,35 @@ function playSong(name) { if (!AC) return; song = SONGS[name]; mStep = 0; mNext 
 function stopSong() { song = null; }
 function musicTick() {
   if (!AC || !song || G.paused) return;
-  const st = 60 / song.bpm / 2, len = song.lead.length;
+  const st = 60 / song.bpm / 2, len = song.lead.length, bl = song.bar;
   if (mNext < now() - 0.3) mNext = now() + 0.02;
   while (mNext < now() + 0.15) {
-    const i = mStep % len, bar = Math.floor(i / 8), s = i % 8, t = mNext;
+    const i = mStep % len, bar = Math.floor(i / bl), s = i % bl, t = mNext;
+    const half = bar * 2 + (s < bl / 2 ? 0 : 1);
+    const [root, q] = song.chords[half % song.chords.length];
     const n = song.lead[i];
     if (n > 0) {
-      let d = 1; while (song.lead[(i + d) % len] === 0 && d < 8) d++;
+      let d = 1; while (song.lead[(i + d) % len] === 0 && d < 12) d++;
       const dur = d * st * 0.9;
       chip(mf(n), t, dur, 0.11, song.duty, song.honk);
       chip(mf(n - 12) * 1.004, t, dur, 0.05, 0.5, song.honk);
       if (song.honk) chip(mf(n - 5), t, dur, 0.035, 0.25, true);
     }
-    let root = song.roots[bar]; if (Array.isArray(root)) root = root[s < 4 ? 0 : 1];
+    const beat = s % 3 === 0;
     if (song.oompah) {
-      if (s % 4 === 0) tone(mf(root - 12), t, st * 1.6, 'triangle', 0.5, musBus);
-      if (s % 4 === 2) for (const iv of [12, 16, 19]) chip(mf(root + iv), t, st * 0.6, 0.035, 0.5, false);
-      if (s === 2 || s === 6) noise(t, 0.06, 0.12, 'bandpass', 2400, 1, musBus);
+      // oom on each dotted-quarter beat, pah-pah on the off eighths
+      if (beat) tone(mf(root - 12), t, st * 2.2, 'triangle', 0.55, musBus);
+      else for (const iv of CHORD[q]) chip(mf(root + 12 + iv), t, st * 0.55, 0.03, 0.5, false);
+      if (s === bl / 2) noise(t, 0.06, 0.14, 'bandpass', 2400, 1, musBus);
     } else {
-      tone(mf(root + (s % 2 ? 12 : 0)), t, st * 0.85, 'triangle', 0.36, musBus);
+      // bouncing triangle bass through the chord
+      const iv = CHORD[q][[0, 2, 1][s % 3]];
+      tone(mf(root - 12 + iv + (s % 3 === 1 ? 12 : 0)), t, st * 0.85, 'triangle', 0.36, musBus);
     }
     if (song.drums) {
-      if (s === 0 || s === 4 || (s === 5 && bar % 2)) { noise(t, 0.08, 0.5, 'lowpass', 400, 1, musBus); tone(120, t, 0.08, 'triangle', 0.6, musBus, 50); }
-      if (s === 2 || s === 6) noise(t, 0.09, 0.32, 'bandpass', 1900, 0.7, musBus);
-      if (s % 2) noise(t, 0.025, 0.1, 'highpass', 8000, 1, musBus);
+      if (s === 0 || (s === 5 && bar % 2)) { noise(t, 0.08, 0.5, 'lowpass', 400, 1, musBus); tone(120, t, 0.08, 'triangle', 0.6, musBus, 50); }
+      if (s === 3) noise(t, 0.09, 0.32, 'bandpass', 1900, 0.7, musBus);
+      noise(t, 0.022, s % 3 ? 0.07 : 0.11, 'highpass', 8000, 1, musBus);
     }
     mStep++; mNext += st;
   }
